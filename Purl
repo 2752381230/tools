@@ -1,0 +1,14 @@
+#!/bin/bash 
+line=$1
+if [ ${line}x == 'x' ]; then
+    echo "Sorry, encode_url need"
+    exit
+# encode_url
+elif [ ${line}X == 'XX' ]; then
+    line=$2
+    curl -so /dev/null -w %{url_effective} --get --data-urlencode "${line}" "" | cut -c 3- 
+# default decode_url
+else
+    decode_url=$(echo -e `echo ${line} | sed 's/+/ /; s/%/\\\\x/g;'`)
+    echo ${decode_url} | sed 's/&/\r\n/g;'
+fi

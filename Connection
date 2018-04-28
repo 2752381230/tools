@@ -1,0 +1,67 @@
+#!/bin/bash
+machine=$1
+howm=$#
+ips=""
+comm="/home/2752381230"
+dests=""
+target="2752381230@"
+if [ "${machine}"x = ""x ]; then
+	echo "Usage: sh $0 [dev|debug|test] [files]"
+	exit
+fi
+
+if [ "${machine}" == "dev" ]; then
+	ips=""
+	dests="${comm}/document/"
+elif [ "${machine}" == "debug" ]; then
+	ips=""
+	dests="${comm}/document/"
+elif [ "${machine}" == "test" ]; then
+	ips=""
+	dests="${comm}/document/"
+elif [ "${machine}" == "mvm" ]; then
+	ips="192.168.56.5"
+	dests="/root/"
+elif [ "${machine}" == "rvm" ]; then
+	ips="192.168.56.6"
+	dests="/root/"
+elif [ "${machine}" == "cvm" ]; then
+	ips="192.168.56.7"
+	dests="/root/"
+else 
+	echo "Sorry......"
+	exit
+fi
+
+if [ ${howm} -ge 2 ]; then ### scp files
+	shift
+	## bug: if files not exists or file's name wrong, script will give the hint
+	if [ "${machine}" == "bvm" ]; then
+		target="root@"
+	elif [ "${machine}" == "rvm" ]; then
+		target="root@"
+	elif [ "${machine}" == "cvm" ]; then
+		target="root@"
+	fi
+	scp $@ ${target}${ips}:${dests}
+	read -p "ssh now ?  " YN
+	case "${YN}" in
+		Y|y)
+			ssh ${target}${ips};;
+		N|n)
+			exit;;
+		*)
+			exit;;
+	esac
+	exit
+else
+	if [ "${machine}" == "bvm" ]; then
+		ssh "root@${ips}"
+	elif [ "${machine}" == "rvm" ]; then
+		ssh "root@${ips}"
+	elif [ "${machine}" == "cvm" ]; then
+		ssh "root@${ips}"
+	else
+		ssh ${target}${ips}
+	fi
+fi

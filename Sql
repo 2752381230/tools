@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# 默认Test库
+host="127.0.0.1"
+user="root"
+port="3306"
+password=""
+dbname="test"
+
+WH=$1
+if [ ${WH}x == ""x ]; then
+    echo "Test environment......"
+elif [ ${WH} == "Onle" ]; then
+    # 线上库
+    host=""
+    user=""
+    port=""
+    password=""
+    dbname=""
+    echo "Onle environment......"
+else 
+    echo "Sorry"
+    exit
+fi
+mysql -h${host} -u${user} -P${port} -p${password} -D${dbname}
