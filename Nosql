@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# 确认 redis-client 存在
+redis_cli="/path/to/redis/bin/redis-cli"
+[[ ! -f ${redis_cli} ]] && echo "Sorry, Install redis first" && exit
+
+# 默认Test库
+host="10.10.10.10"
+port="6379"
+auth="1234567890"
+WH=$1
+if [ ${WH}x == ""x ]; then
+    echo "Test environment......"
+elif [ ${WH} == "Onle" ]; then
+    # 线上库
+    host="10.10.10.10"
+    port="6379"
+    auth="1234567890"
+    echo "Onle environment......"
+else
+    echo "Sorry"
+    exit
+fi
+
+${redis_cli} -h ${host} -p ${port} -a ${auth}
