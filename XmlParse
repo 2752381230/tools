@@ -1,0 +1,13 @@
+#!/bin/bash -
+xmlRaw='<root><foo a="b">lorem</foo><bar value="ipsum" /></root>'
+if [[ ${1}x == ""x ]]; then
+    echo -e "\033[41;36mUsage:\033[0m sh \033[36m$0\033[0m \033[32m\'${xmlRaw}\'\033[0m"
+    echo
+    echo -e "\033[36mThis will ouput:\033[0m"
+    echo
+else
+    xmlRaw=$1
+    echo
+fi
+echo $xmlRaw | xmllint --format -
+echo
