@@ -1,0 +1,53 @@
+#!/bin/bash 
+
+function Usage() {
+cat<<MSG
+
+Usage: s2t "ssr://xxxx" or
+       s2t "ss://xxxx"
+
+MSG
+    exit
+}
+
+function S2text() {
+    text=$(echo $1 | sed -e 's/-/\+/g;s/_/\//g')
+    if [[ "${text:0:4}" == "ssr:" ]]; then
+        eval $(echo "${text:6}" | base64 --decode | awk -F':' '{printf "ssrServer=%s;ssrPort=%s;ssrProtocol=%s;ssrMethod=%s;ssrObfs=%s;ssrPP=%s;",$1,$2,$3,$4,$5,$6}')
+        eval $(echo ${ssrPP} | sed 's/\/\?/ /' | awk '{printf "ssrPB=%s;ssrPA=%s;",$1,$2}')
+        ssrPassword=$(echo ${ssrPB} | base64 --decode)
+        cat<<INFO
+Server  : ${ssrServer}
+Port    : ${ssrPort}
+Password: ${ssrPassword}
+Method  : ${ssrMethod}
+Protocol: ${ssrProtocol}
+Obfs    : ${ssrObfs}
+Params  :
+INFO
+        echo ${ssrPA} | sed 's/+/ /; s/%/\\\\x/g;' | awk -v ul="${decodes}" '{
+            split($1,a,"&");
+            for (k in a) {
+                split(a[k], b, "=");
+                cmd=sprintf("echo %s | base64 --decode", b[2]);
+                cmd | getline decodeStr;
+                print "\t"b[1]" = "decodeStr;
+            }
+        }'
+    else 
+        echo "${text:5}" | base64 --decode | sed 's/@/:/' | awk -F':' '{print "Server  : "$3"\nPort    : "$4"\nPassword: "$2"\nMethod  : "$1}'
+    fi
+}
+
+
+if [ "${1}"x == ""x ]; then
+    Usage
+else
+    ok=$(echo ${1} | sed -n '/^ssr\{0,1\}:\/\//p')
+    [ -e ${ok} ] && echo "Sorry" && Usage
+fi
+#ss="ss://Y2hhY2hhMjA6ZG91Yi5pby9zc3poZngvKmRvdWIuYmlkL3NzemhmeC8qMjk4N0A2NC4xMzcuMjI5LjE1NDoyOTg3"
+#ssr="ssr://NjQuMTM3LjIwMS4yNDY6Mjk4NzphdXRoX3NoYTFfdjQ6Y2hhY2hhMjA6dGxzMS4yX3RpY2tldF9hdXRoOlpHOTFZaTVwYnk5emMzcG9abmd2S21SdmRXSXVZbWxrTDNOemVtaG1lQzhxTWprNE53Lz9yZW1hcmtzPTVweXM2TFNtNVktMzVwMmw2SWVxT21SdmRXSXVhVzh2YzNONmFHWjRMLW1Wbk9XRGotV2ZuLVdRalRwa2IzVmlMbUpwWkM5emMzcG9abmd2"
+#S2text ${ss}
+#S2text ${ssr}
+S2text ${1}
