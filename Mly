@@ -1,0 +1,143 @@
+#!/bin/bash
+function Usage() {
+    cat<<MSG
+
+Usage: 
+    $0 albuomId     Display the download url
+    $0 albuomId  x  Display && Download the audio
+
+MSG
+    exit 1 
+}
+
+function XList() {
+    lists="${basedir}/list.json"
+    [ -f ${lists} ] && rm -rf ${lists}
+    rawUrl=${1}
+    eval $(echo ${rawUrl} | awk -F'/' '{printf "category=%s;albumId=%s", $4,$5}')
+    #echo ${category} ${albumId}
+    pageNum=1
+    while [ 1 -eq 1 ]; do
+        listUrl="https://www.ximalaya.com/revision/album/getTracksList?albumId=${albumId}&pageNum=${pageNum}&sort=0" ## sort {0:Forward sort; 1:Reverse sort}
+        curl -4 -s ${listUrl} \
+        -H 'Cookie: Hm_lpvt_4a7d8ec50cfd6af753c4f8aee3425070=1540462194; Hm_lvt_4a7d8ec50cfd6af753c4f8aee3425070=1540349943; device_id=xm_1540462192824_jnofez7cqsl5kg; _ga=GA1.2.1521695412.1503294682; _xmLog=xm_1503294681879_j6lqu87r1614e1' \
+        -H 'Accept: */*' \
+        -H 'Content-Type: application/x-www-form-urlencoded;charset=UTF-8' \
+        -H 'DNT: 1' \
+        -H 'Accept-Language: zh-cn' \
+        -H 'Host: www.ximalaya.com' \
+        -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0 Safari/605.1.15' \
+        -H "Referer: ${rawUrl}" \
+        -H 'Accept-Encoding: br, gzip, deflate' \
+        -H 'Connection: keep-alive' | gunzip | grep -Eo '"[^"]*" *(: *([0-9]*|"[^"]*")[^{}\["]*|,)?|[^"\]\[\}\{]*|\{|\},?|\[|\],?|[0-9 ]*,?' \
+        | awk '{if ($0 ~ /^[}\]]/ ) offset-=4; printf "%*c%s\n", offset, " ", $0; if ($0 ~ /^[{\[]/) offset+=4}' > ${lists}
+
+        # sed
+        check=$(sed -nE 's#.*"ret":([0-9]+).*#\1#p' ${lists})
+        [ $check -ne 200 ] && echo "Sorry, http failed" && exit 1
+        total=$(sed -nE 's#.*TotalCount":([0-9]+).*#\1#p' ${lists})
+        pages=$(sed -nE 's#.*pageNum":([0-9]+).*#\1#p' ${lists})
+        sizes=$(sed -nE 's#.*pageSize":([0-9]+).*#\1#p' ${lists})
+        count=$(expr ${pages} \* ${sizes})
+        alens=$(expr ${count} - ${total})
+        [ ${alens} -le 0 ] && alens=${sizes}
+        # 解析列表
+        sed 's/^\s*//; s/[\s,]*$//' ${lists} | awk -v domain="https://www.ximalaya.com" -v lens="${alens}" -F':' '
+            BEGIN{offset=0;dex=1}
+            {
+                if (/trackId/)    {trackIdArr[dex]=$2; offset +=1;}
+                else if (/title/) {titleArr[dex]=$2;   offset +=1;}
+                else if (/url/)   {split($2, tmp, "\""); urlArr[dex]=tmp[2];offset +=1;}
+                if (offset/3==1)  {dex += 1; offset = 0;}
+            }
+            END{for (dex=1; dex<=lens; dex++) print trackIdArr[dex], domain""urlArr[dex], titleArr[dex];}'
+        [ -f ${lists} ] && rm -rf ${lists}
+        if [ ${alens} -eq ${sizes} -a ${total} -ne ${count} ]; then
+            pageNum=$(expr ${pageNum} + 1)
+            #echo $check $total $pages $sizes $pageNum
+        else 
+            break
+        fi
+    done
+}
+
+function X2D() {
+    saveDir="${basedir}/Voice/"
+    backDir="${basedir}/Voice_back/"
+    audios="${basedir}/audio.json"
+    downld="${basedir}/download.txt"
+    if [ -d ${saveDir} ]; then
+        [ ! -d ${backDir} ] && mkdir ${backDir}
+        mv ${saveDir} "${backDir}"`date +%F_%T`
+    fi
+    [ -f ${audios} ] && rm -rf ${audios}
+    [ -f ${downld} ] && rm -rf ${downld}
+    rawUrl=${1}
+    eval $(echo ${rawUrl} | awk -F'/' '{printf "category=%s;albumId=%s", $4,$5}')
+    #echo ${category} ${albumId}
+    pageNum=1
+	while [ 1 -eq 1 ]; do
+		playUrl="https://www.ximalaya.com/revision/play/album?albumId=${albumId}&pageNum=${pageNum}&sort=0&pageSize=30"
+		curl -4 -s ${playUrl} \
+		-H 'Cookie: Hm_lpvt_4a7d8ec50cfd6af753c4f8aee3425070=1540463494; Hm_lvt_4a7d8ec50cfd6af753c4f8aee3425070=1540349943; device_id=xm_1540462192824_jnofez7cqsl5kg; _ga=GA1.2.1521695412.1503294682; _xmLog=xm_1503294681879_j6lqu87r1614e1' \
+		-H 'Accept: */*' \
+		-H 'Content-Type: application/x-www-form-urlencoded;charset=UTF-8' \
+		-H 'DNT: 1' \
+		-H 'Accept-Language: zh-cn' \
+		-H 'Host: www.ximalaya.com' \
+		-H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0 Safari/605.1.15' \
+		-H "Referer: ${rawUrl}" \
+		-H 'Accept-Encoding: br, gzip, deflate' \
+        -H 'Connection: keep-alive' | gunzip | grep -Eo '"[^"]*" *(: *([0-9]*|"[^"]*")[^{}\["]*|,)?|[^"\]\[\}\{]*|\{|\},?|\[|\],?|[0-9 ]*,?' \
+        | awk '{if ($0 ~ /^[}\]]/ ) offset-=4; printf "%*c%s\n", offset, " ", $0; if ($0 ~ /^[{\[]/) offset+=4}' > ${audios}
+        # sed
+        check=$(sed -nE 's#.*"ret":([0-9]+).*#\1#p' ${audios})
+        [ $check -ne 200 ] && echo "Sorry, http failed" && exit 1
+        bMore=$(sed -nE 's#.*hasMore":(.*),?.*#\1#p' ${audios})
+        # 解析列表
+        sed 's/^\s*//; s/[\s,]*$//' ${audios} | awk -v domain="https://www.ximalaya.com" -F':' '
+            BEGIN{offset=0;dex=1}
+            {
+                if (/trackId/)        {trackIdArr[dex]=$2; offset +=1;}
+                else if (/trackName/) {nameArr[dex]=$2;    offset +=1;}
+                else if (/src/)       {urlArr[dex]=$3;     offset +=1;}
+                if (offset/3==1)  {dex += 1; offset = 0;}
+            }
+            END{asort(trackIdArr); for (id in trackIdArr) print trackIdArr[id], "\"http:"urlArr[id], nameArr[id];}' | sort >> ${downld}
+        [ -f ${audios} ] && rm -rf ${audios}
+        if [[ "${bMore}" == "true" ]]; then
+            pageNum=$(expr ${pageNum} + 1)
+        else 
+            break
+        fi
+	done
+    [ ! -f ${downld} ] && echo "Sorry" && return
+    while read line ; do
+        urls=$(echo $line | sed 's/"//g' | awk '{print $2}')
+        sfix=$(echo ${urls}| awk -F'.' '{print $NF}')
+        name=$(echo $line | sed 's/"//g' | awk '{print $NF}')
+        ## 是否下载
+        if [ "${2}" == "false" ]; then
+            echo "url: ${urls}, name: ${name}.${sfix}"
+        else
+            [ ! -d  ${saveDir} ] && mkdir ${saveDir} && echo "Save download audio in ${saveDir}"
+            echo "  Download ${urls} and save as ${saveDir}${name}.${sfix}"
+            curl -s "${urls}" > ${saveDir}${name}.${sfix}
+        fi
+    done < ${downld}
+    [ "${2}" == "true" -a -f ${downld} ] && rm -rf ${downld}
+}
+
+if [ "${1}"x == ""x ]; then
+    Usage
+else
+    ok=$(echo ${1} | sed -n '/^https\{0,1\}:\/\/www\.ximalaya\.com/p')
+    [ -e ${ok} ] && echo "Sorry" && Usage
+fi
+basedir=$(cd `dirname $0`;pwd)
+rawUrl=${1}
+dFlag=false
+[ "${2}"x != ""x ] && dFlag=true
+
+#XList ${rawUrl}
+X2D ${rawUrl} ${dFlag}
