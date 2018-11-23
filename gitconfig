@@ -1,0 +1,18 @@
+[user]
+    name  = User
+    email = User@example.com
+[core]
+    editor = vim
+[merge]
+    tool = vimdiff
+[color]
+    status = auto
+    diff = auto
+    branch = auto
+    interactive = auto
+[alias]
+    co = checkout
+    ci = commit
+    st = status
+    br = branch
+    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'
