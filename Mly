@@ -3,8 +3,12 @@ function Usage() {
     cat<<MSG
 
 Usage: 
-    $0 albuomId     Display the download url
-    $0 albuomId  x  Display && Download the audio
+    $0 albuomId_url     Display the download url
+    $0 albuomId_url  x  Display && Download the audio
+
+Example
+    This will display the download url(104 items)
+    $0 https://www.ximalaya.com/xiangsheng/12843646/
 
 MSG
     exit 1 
@@ -112,18 +116,27 @@ function X2D() {
         fi
 	done
     [ ! -f ${downld} ] && echo "Sorry" && return
+    # 增加文件序号
+    zeroPrefix=$(wc -l ${downld} | awk '{if ($1>100){print "00"} else if ($1>10){print "0"} else {print ""}}')
+    index=1
     while read line ; do
+        [ ${index} -eq 10 ]   && zeroPrefix=${zeroPrefix:1}
+        [ ${index} -eq 100 ]  && zeroPrefix=${zeroPrefix:1}
+        #[ ${index} -eq 1000 ] && zeroPrefix=${zeroPrefix:1}
+        fileIndex="${zeroPrefix}${index}:"
         urls=$(echo $line | sed 's/"//g' | awk '{print $2}')
         sfix=$(echo ${urls}| awk -F'.' '{print $NF}')
         name=$(echo $line | sed 's/"//g' | awk '{print $NF}')
         ## 是否下载
         if [ "${2}" == "false" ]; then
-            echo "url: ${urls}, name: ${name}.${sfix}"
+            echo "url: ${urls}, name: ${fileIndex}${name}.${sfix}"
         else
             [ ! -d  ${saveDir} ] && mkdir ${saveDir} && echo "Save download audio in ${saveDir}"
-            echo "  Download ${urls} and save as ${saveDir}${name}.${sfix}"
-            curl -s "${urls}" > ${saveDir}${name}.${sfix}
+            saveFile="${saveDir}${fileIndex}${name}.${sfix}"
+            echo "  Download ${urls} and save as ${saveFile}"
+            curl -s "${urls}" > ${saveFile}
         fi
+        index=$(expr ${index} + 1)
     done < ${downld}
     [ "${2}" == "true" -a -f ${downld} ] && rm -rf ${downld}
 }
