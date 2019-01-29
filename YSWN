@@ -1,0 +1,69 @@
+#!/bin/bash
+
+echo "\tYellow Stone Nature Voice As White Noise\n"
+
+baseDir=$(cd `dirname $0`; pwd)
+voiceDir="$baseDir/Voice"
+backDir="$baseDir/Voice_back"
+rawUrl="https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm"
+
+### Index html
+rawTmp=${baseDir}/$(basename ${rawUrl})
+linkFiles="${baseDir}/link.txt"
+domains=$(echo "${rawUrl}" | awk -F"/" '{print $1"//"$3}')
+curl -4 -s "${rawUrl}" > ${rawTmp}
+[ ! -s ${rawTmp} ] && echo "Sorry, get ${rawUrl} faield" && exit
+
+### Alphabet Index
+startIndex=$(grep -n "<h2>Index of Sounds<\/h2>" ${rawTmp} | awk -F":" '{print $1}')
+endIndex=$(grep -n "href=.* id=.*<\/a><\/p>$" ${rawTmp} | tail -n1 | awk -F":" '{print $1}')
+head -n ${endIndex} ${rawTmp} | tail -n `expr ${endIndex} - ${startIndex}` > ${rawTmp}
+space="\t"
+[ -f ${linkFiles} ] && rm ${linkFiles}
+while read line; do
+    name=$(echo ${line} | sed 's#<p>##' | awk -F'[><]' '{print $3}')
+    [[ ${name}x == ""x ]] && continue
+    [ ${#name} -eq 1 ] && echo "${name}" >> ${linkFiles} && continue ## This is the Alphabet Index
+    linkUrl=${domains}/$(echo ${line} | awk -F'"' '{print $2}')      ## This is the full url
+    echo ${space}${linkUrl}${space}${name} >> ${linkFiles}
+done < ${rawTmp}
+rm ${rawTmp}
+
+### Get Infos
+[ -d ${voiceDir} ] && mv ${voiceDir} "${backDir}"`date +%F_%T`
+mkdir ${voiceDir}
+dirPrefix=""  ### sort by Alphabet
+index=1
+while read line; do
+    [ ${#line} -eq 1 ] && dirPrefix=$line && continue
+    innerDir=$(echo ${line} | sed 's/^.*htm//;s/-//g;s/ //g;')
+    linkUrl=$(echo ${line} | sed 's/htm.*/htm/;s/ //g')
+    saveDir="${voiceDir}/${dirPrefix}-${innerDir}"
+    [ -d ${saveDir} ] && rm -rf ${saveDir}
+    mkdir ${saveDir}
+    itemInfo="${saveDir}/info.txt"
+    [ -f ${itemInfo} ] && rm ${itemInfo}
+    echo "url: ${linkUrl}" >> ${itemInfo}
+    innerUrl="${saveDir}/tmpUrl.htm"
+    curl -4 -s ${linkUrl} > ${innerUrl}
+    eval $(grep "/photosmultimedia/images/" ${innerUrl} | grep "www" | awk -F'"' '{printf "picLink=%s;picContent=\"%s\"", $4, $(NF-1)}')
+    picName=$(basename ${picLink})
+    #echo ${picLink} ${picName} ${picContent}
+    curl -4 -s ${picLink} > "${saveDir}/${picName}"
+    echo "picLink: ${picLink}\npicName: ${picName}\npicContent: ${picContent}" >> ${itemInfo}
+
+    echo "\nMeta:" >> ${itemInfo}
+    lineNum=$(grep -n "description avClearfix" ${innerUrl} | awk -F':' '{print $1}')
+    for num in ${lineNum}; do
+        metaName=$(head -n `expr $num + 1` ${innerUrl} | tail -n1 | awk -F '[><]' '{print $3}' | sed 's/ //g;s/-//g')
+        metaLink=${domains}$(head -n $(expr $num + 3) ${innerUrl} | tail -n1 | awk -F '"' '{print $2}')
+        metaType=$(echo ${metaLink} | awk -F'.' '{print $NF}')
+        metaName="$metaName.$metaType"
+        #echo ${metaLink} ${metaName}
+        curl -4 -s ${metaLink} > "${saveDir}/${metaName}"
+        echo "metaLink: ${metaLink}\nmetaName: ${metaName}" >> ${itemInfo}
+    done
+    rm "${innerUrl}"
+    #[ $index -eq 5 ] && break  ## For test
+    index=$(expr $index + 1)
+done < ${linkFiles}
