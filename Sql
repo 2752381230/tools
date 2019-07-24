@@ -9,7 +9,7 @@ dbname="test"
 
 WH=$1
 if [ ${WH}x == ""x ]; then
-    echo "Test environment......"
+    echo -e "\033[0mTest\033[0m environment......"
 elif [ ${WH} == "Onle" ]; then
     # 线上库
     host=""
@@ -17,9 +17,10 @@ elif [ ${WH} == "Onle" ]; then
     port=""
     password=""
     dbname=""
-    echo "Onle environment......"
+    echo -e "\033[0mOnle\033[0m environment......"
 else 
-    echo "Sorry"
+    echo -e "\033[41;36mUsage:\033[0m Sql \033[36m[test|Onle|Other]\033[0m"
+    echo -e "       \033[32mSql = Sql test\033[0m"
     exit
 fi
-mysql -h${host} -u${user} -P${port} -p${password} -D${dbname}
+mysql -h${host} -u${user} -P${port} -p${password} -D${dbname} --default-character-set=utf8
