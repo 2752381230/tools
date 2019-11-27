@@ -1,0 +1,30 @@
+#!/bin/bash
+machine=$1
+src=$2
+dst=$(pwd)
+ips=""
+user=""
+if [ "${machine}"x = ""x ]; then
+    echo "Usage: sh $0 [dev|debug|test] [files]"
+    exit
+fi
+
+if [ "${machine}" == "test" ]; then
+    user="dev"
+    ips="123.123.123.123"
+    src="/home/dev/${src}"
+elif [ "${machine}" == "prod" ]; then
+    user="dev"
+    ips="123.123.123.123"
+    src="/home/dev/${src}"
+elif [ "${machine}" == "cvm" ]; then
+    user="root"
+    ips="192.168.56.2"
+    src="/root//${src}"
+else 
+    echo "Sorry......"
+    exit
+fi
+
+target="${user}@${ips}:${src}"
+scp "${target}" ${dst}
